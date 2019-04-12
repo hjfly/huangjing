@@ -1,0 +1,153 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+<div id="indexDiv" class="king-layout2-main mt15" style="width:960px;">
+    <form class="form-horizontal">
+        <div class="form-group clearfix ">
+            <label class="col-sm-3 control-label bk-lh30 pt0">选择业务：</label>
+            <div class="col-sm-9">
+                <select name="" id="bizSelect" class="form-control bk-valign-top">
+                    % for biz in business_list:
+                    <option value="${biz.get('bk_biz_id')}">${biz.get('bk_biz_name')}</option>
+                    % endfor
+                </select>
+            </div>
+        </div>
+        <div class="form-group clearfix ">
+            <label class="col-sm-3 control-label bk-lh30 pt0">选择集群：</label>
+            <div class="col-sm-9">
+                <select name="" id="setSelect" class="form-control bk-valign-top">
+                    % for set in set_list:
+                    <option value="${set.get('bk_set_id')}">${set.get('bk_set_name')}</option>
+                    % endfor
+                </select>
+            </div>
+        </div>
+        <div class="form-group clearfix">
+            <div class="col-sm-9 col-sm-offset-3">
+                <button type="button" class="king-btn mr10  king-success" id="excuteJob">执行作业</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="panel panel-default mb0">
+        <div class="panel-heading">主机列表</div>
+        <div class="panel-body">
+            <table class="table mb0 pr15 ranger-box2  ">
+                <thead>
+                <tr>
+                    <th>内网IP</th>
+                    <th>系统名</th>
+                    <th>主机名</th>
+                    <th>云区域</th>
+                </tr>
+                </thead>
+                <tbody id="tbodyIpList">
+                % for host in host_list:
+                <tr name="hostData" data-ip="${host['host'].get('bk_host_innerip')}" data-bk_cloud_id="${host['host'].get('bk_cloud_id')[0].get('id')}">
+                    <td>${host['host'].get('bk_host_innerip')}</td>
+                    <td>${host['host'].get('bk_os_name')}</td>
+                    <td>${host['host'].get('bk_host_name')}</td>
+                    <td>${host['host'].get('bk_cloud_id')[0].get('bk_inst_name')}</td>
+                </tr>
+                % endfor
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- 设置面板End -->
+</div>
+
+<script>
+     $("#indexLi").parent().addClass('king-navbar-active');
+     $("#historyLi").parent().removeClass('king-navbar-active');
+
+    $('#bizSelect').bind('change', function () {
+        $.ajax({
+            type: 'POST',
+            url: '${SITE_URL}api/set_list/',
+            data: {
+                'bk_biz_id': $('#bizSelect').val()
+            },
+            dataType: 'json',
+            success: function (response) {
+                var data = response.set_list;
+                var _html = "";
+                for (var i = 0; i < data.length; i++) {
+                    _html += "<option value=" + data[i]['bk_set_id'] + ">" + data[i]['bk_set_name'] + "</option>";
+                }
+                $('#setSelect').html(_html);
+
+                var setData = response.host_list;
+                var _html = "";
+                for (var i = 0; i < setData.length; i++) {
+                    _html += '<tr name="hostData" data-ip="' + setData[i]['host']['bk_host_innerip'] + '" data-bk_cloud_id="' + setData[i]['host']['bk_cloud_id'][0]['id'] + '" >';
+                    _html += '<td>' + setData[i]['host']['bk_host_innerip'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_os_name'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_host_name'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_cloud_id'][0]['bk_inst_name'] + ' </td>';
+                    _html += '</tr>';
+                }
+                console.log(_html);
+                $('#tbodyIpList').html(_html);
+            }
+
+        });
+    });
+    $('#setSelect').bind('change', function () {
+        $.ajax({
+            type: 'POST',
+            url: '${SITE_URL}api/change_set_host/',
+            data: {
+                'bk_biz_id': $('#bizSelect').val(),
+                'bk_set_id': $('#setSelect').val()
+            },
+            success: function (response) {
+                var setData = response.host_list;
+                var _html = "";
+                for (var i = 0; i < setData.length; i++) {
+                    _html += '<tr name="hostData" data-ip="' + setData[i]['host']['bk_host_innerip'] + '" data-bk_cloud_id="' + setData[i]['host']['bk_cloud_id'][0]['id'] + '" >';
+                    _html += '<td>' + setData[i]['host']['bk_host_innerip'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_os_name'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_host_name'] + ' </td>';
+                    _html += '<td>' + setData[i]['host']['bk_cloud_id'][0]['bk_inst_name'] + ' </td>';
+                    _html += '</tr>';
+                }
+                $('#tbodyIpList').html(_html);
+            },
+            dataType: 'json'
+        });
+    });
+     $('#excuteJob').bind('click', function () {
+         if(window.confirm("确定执行吗")){
+              // 获取请求参数
+             var _data={};
+            _data['bk_biz_id'] = $('#bizSelect').val();
+            _data['bk_biz_name'] = $('#bizSelect option:selected').text();
+            _data['bk_job_id'] = 4;
+            _data['bk_set_id'] = $('#setSelect').val();
+            _data['ip_list'] = [];
+            $('[name="hostData"]').each(function() {
+                _data['ip_list'].push({"bk_cloud_id": $(this).data("bk_cloud_id"), "ip": $(this).data("ip")})
+            });
+             $.ajax({
+                 type: 'POST',
+                 url: '${SITE_URL}api/execute_job/',
+                 data: {'data': JSON.stringify(_data)},
+                 success: function (response) {
+                     if (response.result) {
+                         alert('执行作业成功');
+                     }else{
+                          alert(response.message);
+                     }
+                 },
+                 dataType: 'json'
+             });
+         }
+     });
+
+
+</script>
+</%block>
+

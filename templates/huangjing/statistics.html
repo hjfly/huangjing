@@ -1,0 +1,120 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+<div id="historyDiv" class="king-layout2-main mt15" style="width:960px;">
+    <form class="form-horizontal">
+        <div class="form-group clearfix ">
+            <label class="col-sm-3 control-label bk-lh30 pt0">选择业务：</label>
+            <div class="col-sm-9">
+                <select id="bizStatisticSelect" class="form-control bk-valign-top">
+                    % for biz in business_list:
+                    <option value="${biz.get('bk_biz_id')}">${biz.get('bk_biz_name')}</option>
+                    % endfor
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <div class="panel panel-default mb0">
+        <div class="panel-heading">任务统计</div>
+        <div class="panel-body">
+            <div id="chart4_demo1" style="height:500px;padding:10px;"></div>
+        </div>
+    </div>
+    <!-- 设置面板End -->
+</div>
+<script type="text/javascript">
+    //chart4_demo1_js_start
+    function createEPieChart(conf) {
+        var myChart = echarts.init(document.getElementById(conf.selector));
+        var aLegend = [];
+        var series = conf.data.series;
+        for (var i = 0; i < series.length; i++) {
+            aLegend[i] = series[i].name;
+        }
+        ;
+        // 填入数据
+        myChart.setOption({
+            title: {
+                text: conf.data.title,
+                subtext: '',
+                x: 'center'
+            },
+            legend: {
+                // x : 'left',
+                y: 'bottom',
+                data: aLegend
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: "{a} <br/>{b} : {c} ({d}%)"
+            },
+            toolbox: {
+                show: true,
+                feature: {
+                    mark: {show: true},
+                    dataView: {show: true, readOnly: false},
+                    magicType: {
+                        show: true,
+                        type: ['pie', 'funnel'],
+                        option: {
+                            funnel: {
+                                x: '25%',
+                                width: '50%',
+                                funnelAlign: 'left',
+                                max: 1548
+                            }
+                        }
+                    },
+                    restore: {show: true},
+                    saveAsImage: {show: true}
+                }
+            },
+            calculable: true,
+            series: [{
+                // 根据名字对应到相应的系列
+                name: '访问来源',
+                type: 'pie',
+                data: series
+            }]
+        });
+    }
+
+    function initEPieChart(conf) {
+        $.ajax({
+            url: conf.url,
+            type: 'post',
+            data:{'bk_biz_id':$('#bizStatisticSelect').val()},
+            dataType: conf.dataType,
+            success: function (res) {
+                //获取数据成功
+                if (res.result) {
+                    var data = res.data;
+                    createEPieChart({
+                        selector: conf.containerId, // 图表容器
+                        data: data, // 图表数据
+                    });
+                }
+            }
+        });
+    }
+
+    $('#bizStatisticSelect').bind('change', function () {
+        initEPieChart({
+                    url: '${SITE_URL}statistics_data',
+                    dataType: 'json',
+                    containerId: 'chart4_demo1'
+                });
+    });
+    $(function () {
+        $("#statisticLi").parent().addClass('king-navbar-active');
+        $("#indexLi").parent().removeClass('king-navbar-active');
+        initEPieChart({
+            url: '${SITE_URL}statistics_data',
+            dataType: 'json',
+            containerId: 'chart4_demo1'
+        });
+    });
+    //chart4_demo1_js_end
+</script>
+</%block>
